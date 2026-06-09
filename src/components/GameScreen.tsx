@@ -3,18 +3,17 @@ import { getLevel } from '../engine/levels';
 import { generateQuestion } from '../engine/questionGenerator';
 import { scoreAnswer } from '../engine/scoringEngine';
 import { playSound } from '../engine/soundEngine';
-import type { AppSettings, Question, Skill } from '../types/game';
+import type { AppSettings, Question, RoundSeconds, Skill } from '../types/game';
 import { LevelBadge } from './LevelBadge';
 import { QuestionCard } from './QuestionCard';
 import { ScorePanel } from './ScorePanel';
 import { TimerBar } from './TimerBar';
 
-export const RUSH_SECONDS = 90;
 export type AnswerRecord = { question: Question; correct: boolean; timeMs: number; fast: boolean; streak: number };
-export type RushSummary = { score: number; bestStreak: number; answers: AnswerRecord[] };
+export type RushSummary = { score: number; bestStreak: number; answers: AnswerRecord[]; roundSeconds: RoundSeconds };
 
-export function GameScreen({ level, hiddenDifficultyAdjustment, settings, onFinished }: { level: number; hiddenDifficultyAdjustment: number; settings: AppSettings; onFinished: (s: RushSummary) => void }) {
-  const [secondsLeft, setSecondsLeft] = useState(RUSH_SECONDS);
+export function GameScreen({ level, hiddenDifficultyAdjustment, settings, roundSeconds, onFinished }: { level: number; hiddenDifficultyAdjustment: number; settings: AppSettings; roundSeconds: RoundSeconds; onFinished: (s: RushSummary) => void }) {
+  const [secondsLeft, setSecondsLeft] = useState(roundSeconds);
   const [question, setQuestion] = useState(() => generateQuestion(level, hiddenDifficultyAdjustment));
   const [value, setValue] = useState('');
   const [feedback, setFeedback] = useState<'idle' | 'correct' | 'wrong'>('idle');
@@ -38,8 +37,8 @@ export function GameScreen({ level, hiddenDifficultyAdjustment, settings, onFini
     finishedRef.current = true;
     if (timeoutRef.current) window.clearTimeout(timeoutRef.current);
     playSound('gameOver', settings.soundEnabled);
-    onFinished({ score: scoreRef.current, bestStreak: bestRef.current, answers: answersRef.current });
-  }, [onFinished, settings.soundEnabled]);
+    onFinished({ score: scoreRef.current, bestStreak: bestRef.current, answers: answersRef.current, roundSeconds });
+  }, [onFinished, roundSeconds, settings.soundEnabled]);
 
   useEffect(() => {
     const id = window.setInterval(() => setSecondsLeft((s) => {
@@ -85,10 +84,10 @@ export function GameScreen({ level, hiddenDifficultyAdjustment, settings, onFini
 
   const levelInfo = getLevel(level);
   return <main className={secondsLeft <= 10 ? 'screen game danger-bg' : 'screen game'}>
-    <div className="topbar"><TimerBar secondsLeft={secondsLeft} totalSeconds={RUSH_SECONDS} /><LevelBadge level={levelInfo.level} label={levelInfo.title} /></div>
+    <div className="topbar"><TimerBar secondsLeft={secondsLeft} totalSeconds={roundSeconds} /><LevelBadge level={levelInfo.level} label={levelInfo.title} /></div>
     <ScorePanel score={score} streak={streak} bestStreak={bestStreak} correct={correct} wrong={wrong} pulse={pulse} />
     <QuestionCard question={question} value={value} feedback={feedback} correctAnswer={correctAnswer} disabled={locked} onChange={setValue} onSubmit={submit} />
-    <p className="hint">Numbers · Backspace · Negative sign · Enter</p>
+    <p className="hint">{roundSeconds}s Rush · Numbers · Backspace · Minus · Enter</p>
   </main>;
 }
 
