@@ -142,7 +142,7 @@ function migrateLegacyLocalStoragePlayer(): PlayerData | null {
 
 async function loadAppData(db: IDBDatabase): Promise<AppData> {
   let players = await getAll<PlayerData>(db, 'players');
-  let settings = await getOne<AppSettings>(db, 'settings', SETTINGS_ID);
+  const savedSettings = await getOne<AppSettings>(db, 'settings', SETTINGS_ID);
 
   if (players.length === 0) {
     const migrated = migrateLegacyLocalStoragePlayer();
@@ -151,10 +151,8 @@ async function loadAppData(db: IDBDatabase): Promise<AppData> {
     players = [firstPlayer];
   }
 
-  if (!settings) {
-    settings = defaultSettings(players[0].id);
-    await putOne(db, 'settings', settings);
-  }
+  let settings: AppSettings = savedSettings ?? defaultSettings(players[0].id);
+  if (!savedSettings) await putOne(db, 'settings', settings);
 
   let player = players.find((candidate) => candidate.id === settings.selectedPlayerId) ?? players[0];
 
