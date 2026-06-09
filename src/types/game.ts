@@ -1,4 +1,6 @@
 export type Skill = 'addition' | 'subtraction' | 'multiplication' | 'division' | 'mixed';
+export type AvatarColor = 'cyan' | 'purple' | 'yellow' | 'pink' | 'green' | 'orange' | 'blue';
+export type RoundSeconds = 30 | 60 | 90;
 
 export type Question = {
   id: string;
@@ -24,27 +26,39 @@ export type PlayerData = {
   totalCorrect: number;
   totalWrong: number;
   hiddenDifficultyAdjustment: number;
+  avatarIcon: string;
+  avatarColor: AvatarColor;
+  soundEnabled: boolean;
+  musicEnabled: boolean;
   skillStats: Record<Skill, SkillStats>;
   createdAt: string;
   updatedAt: string;
 };
 
 export type AppSettings = {
-  id: 'global';
-  selectedPlayerId: string | null;
   soundEnabled: boolean;
   musicEnabled: boolean;
 };
 
+export type LeaderboardEntry = {
+  id: string;
+  name: string;
+  level: number;
+  bestScore: number;
+  gamesPlayed: number;
+  avatarIcon: string;
+  avatarColor: AvatarColor;
+};
+
 export type AppData = {
   players: PlayerData[];
-  player: PlayerData;
-  settings: AppSettings;
+  leaderboard: LeaderboardEntry[];
 };
 
 export type RushHistoryRecord = {
   id: string;
   playerId: string;
+  roundSeconds: RoundSeconds;
   score: number;
   correct: number;
   wrong: number;
@@ -57,9 +71,26 @@ export type RushHistoryRecord = {
   playedAt: string;
 };
 
-export type SaveData = {
-  player: PlayerData;
-  settings: AppSettings;
+export type CreatePlayerInput = {
+  name: string;
+  avatarIcon: string;
+  avatarColor: AvatarColor;
 };
 
-export type Screen = 'start' | 'countdown' | 'game' | 'results';
+export type SaveRushResultInput = {
+  playerId: string;
+  roundSeconds: RoundSeconds;
+  score: number;
+  correct: number;
+  wrong: number;
+  accuracy: number;
+  bestStreak: number;
+  xpEarned: number;
+  levelBefore: number;
+  levelAfter: number;
+  averageTimeMs: number;
+  hiddenDifficultyAdjustment: number;
+  skillStatsDelta: Record<Skill, { correct: number; wrong: number; time: number }>;
+};
+
+export type Screen = 'choose' | 'start' | 'countdown' | 'game' | 'results';
