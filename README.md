@@ -1,40 +1,86 @@
 # Math Rush Game
 
-Math Rush is a local browser-based 90-second math rush game for kids. It is built with Vite, React, TypeScript, plain CSS, and IndexedDB for local browser storage.
+Math Rush is a fast family math game for kids. It is built with Vite, React, TypeScript, plain CSS, and a small Node/Express + SQLite API so every device on the home network can share the same players, XP, history, and leaderboard.
+
+## Current stage
+
+V2.0 shared-family-server foundation:
+
+- React frontend served by Nginx
+- Express API on the home server
+- SQLite database under `server/data/math-rush.db`
+- Choose-player flow on every load
+- Shared players, XP, best score, skill stats, rush history, and leaderboard
+- Per-player sound/music settings
+- 30s / 60s / 90s rush length options
+- Home network only, no public internet auth yet
 
 ## Run locally
+
+Terminal 1:
 
 ```bash
 npm install
 npm run dev
 ```
 
-## Build
+Terminal 2:
+
+```bash
+cd server
+npm install
+npm run dev
+```
+
+Then open the Vite URL. The frontend proxies `/api` to `http://127.0.0.1:3001` during development.
+
+## Build frontend
 
 ```bash
 npm run build
 ```
 
-## V1 scope
+## Build API
 
-- Local browser game
-- Multiple local player profiles
-- Keyboard-first 90-second rush rounds
-- Scoring, streaks, XP, levels, and best score per player
-- Saved skill stats per player
-- Rush history saved locally
-- Gentle post-rush adaptive difficulty
-- Sound effects and placeholder browser music toggle
-- Neon arcade/speed visual style
+```bash
+cd server
+npm install
+npm run build
+npm run start
+```
 
-## Local storage model
+## Home server deployment notes
 
-The app uses the browser's built-in IndexedDB with these stores:
+Frontend files are served from:
 
-- players
-- settings
-- rushResults
+```bash
+/var/www/math-rush-game
+```
 
-The first run attempts to migrate the old localStorage save into the first local player profile.
+API runs locally on:
 
-No backend, Supabase, Electron, Godot, login, or multiplayer is used.
+```bash
+127.0.0.1:3001
+```
+
+Nginx should serve the static frontend and proxy `/api/` to the API. A sample config is in:
+
+```bash
+deploy/nginx-math-rush-game.conf
+```
+
+A sample systemd service template is in:
+
+```bash
+deploy/math-rush-api.service.example
+```
+
+## Important data note
+
+The shared family data is in SQLite:
+
+```bash
+server/data/math-rush.db
+```
+
+Back up this file if the family starts using the game seriously. Do not commit the database file to GitHub.
