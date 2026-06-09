@@ -1,41 +1,74 @@
-import { useState } from 'react';
 import { getLevel } from '../engine/levels';
 import { levelProgress } from '../engine/progressionEngine';
-import type { AppData, AppSettings } from '../types/game';
+import type { AppSettings, LeaderboardEntry, PlayerData, RoundSeconds, RushHistoryRecord } from '../types/game';
 import { LevelBadge } from './LevelBadge';
 import { SettingsPanel } from './SettingsPanel';
 
-export function StartScreen({ appData, onStart, onSettingsChange, onSelectPlayer, onAddPlayer }: { appData: AppData; onStart: () => void; onSettingsChange: (s: AppSettings) => void; onSelectPlayer: (playerId: string) => void; onAddPlayer: (name: string) => void }) {
-  const [newPlayerName, setNewPlayerName] = useState('');
-  const level = getLevel(appData.player.level);
-  const progress = levelProgress(appData.player.level, appData.player.xp);
+const roundOptions: RoundSeconds[] = [30, 60, 90];
+const dateFormat = new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 
-  const addPlayer = () => {
-    onAddPlayer(newPlayerName);
-    setNewPlayerName('');
-  };
+function Avatar({ player }: { player: PlayerData }) {
+  return <span className={`avatar large ${player.avatarColor}`}>{player.avatarIcon}</span>;
+}
 
-  return <main className="screen center"><section className="hero">
-    <p className="eyebrow">90 Second Number Sprint</p>
-    <h1>Math Rush</h1>
-    <p className="copy">Answer fast. Build streaks. Level up. Keep your rhythm clean and your score climbing.</p>
+function Leaderboard({ leaderboard }: { leaderboard: LeaderboardEntry[] }) {
+  return <ol className="leaderboard-list compact-list">
+    {leaderboard.slice(0, 5).map((entry, index) => <li key={entry.id}>
+      <span className="rank">#{index + 1}</span>
+      <span className={`avatar mini ${entry.avatarColor}`}>{entry.avatarIcon}</span>
+      <span>{entry.name}</span>
+      <b>{entry.bestScore}</b>
+    </li>)}
+  </ol>;
+}
 
-    <div className="player-panel">
-      <div>
-        <span className="micro-label">Local Player</span>
-        <select value={appData.player.id} onChange={(event) => onSelectPlayer(event.target.value)}>
-          {appData.players.map((player) => <option key={player.id} value={player.id}>{player.name} · LV {player.level}</option>)}
-        </select>
+function History({ history }: { history: RushHistoryRecord[] }) {
+  if (!history.length) return <p className="empty-state">No rushes yet for this player.</p>;
+  return <div className="history-list">
+    {history.slice(0, 5).map((item) => <div key={item.id} className="history-row">
+      <b>{item.score}</b>
+      <span>{item.roundSeconds}s</span>
+      <span>{item.accuracy}%</span>
+      <small>{dateFormat.format(new Date(item.playedAt))}</small>
+    </div>)}
+  </div>;
+}
+
+export function StartScreen({ player, leaderboard, history, roundSeconds, onRoundSecondsChange, onStart, onSettingsChange, onBackToPlayers }: { player: PlayerData; leaderboard: LeaderboardEntry[]; history: RushHistoryRecord[]; roundSeconds: RoundSeconds; onRoundSecondsChange: (roundSeconds: RoundSeconds) => void; onStart: () => void; onSettingsChange: (settings: AppSettings) => void; onBackToPlayers: () => void }) {
+  const level = getLevel(player.level);
+  const progress = levelProgress(player.level, player.xp);
+  const settings = { soundEnabled: player.soundEnabled, musicEnabled: player.musicEnabled };
+
+  return <main className="screen center"><section className="hero player-home">
+    <div className="player-home-top">
+      <div className="player-title">
+        <Avatar player={player} />
+        <div>
+          <p className="eyebrow">Player Ready</p>
+          <h1>{player.name}</h1>
+        </div>
       </div>
-      <div className="player-actions">
-        <input value={newPlayerName} placeholder="New player name" maxLength={18} onChange={(event) => setNewPlayerName(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter') addPlayer(); }} />
-        <button className="secondary compact" onClick={addPlayer}>Add Player</button>
+      <button className="secondary" onClick={onBackToPlayers}>Switch Player</button>
+    </div>
+
+    <p className="copy">Answer fast. Build streaks. Level up. Keep your rhythm clean and your family score climbing.</p>
+
+    <div className="start-stats"><LevelBadge level={level.level} label={level.title} /><div className="stat"><span>Best Score</span><b>{player.bestScore}</b></div><div className="stat"><span>XP</span><b>{player.xp}</b></div></div>
+    <div className="progress"><div><span>{level.description}</span><b>{progress.percent}%</b></div><i><em style={{ width: `${progress.percent}%` }} /></i><small>{progress.next ? `${progress.remaining} XP to next level` : 'Maximum level reached'}</small></div>
+
+    <div className="round-panel">
+      <span className="micro-label">Rush Length</span>
+      <div className="round-options">
+        {roundOptions.map((option) => <button key={option} className={roundSeconds === option ? 'round-choice active' : 'round-choice'} onClick={() => onRoundSecondsChange(option)}>{option}s</button>)}
       </div>
     </div>
 
-    <div className="start-stats"><LevelBadge level={level.level} label={level.title} /><div className="stat"><span>Best Score</span><b>{appData.player.bestScore}</b></div><div className="stat"><span>XP</span><b>{appData.player.xp}</b></div></div>
-    <div className="progress"><div><span>{level.description}</span><b>{progress.percent}%</b></div><i><em style={{ width: `${progress.percent}%` }} /></i><small>{progress.next ? `${progress.remaining} XP to next level` : 'Maximum level reached'}</small></div>
-    <button className="primary" onClick={onStart}>Start 90s Rush</button>
-    <SettingsPanel settings={appData.settings} onChange={onSettingsChange} />
+    <button className="primary" onClick={onStart}>Start {roundSeconds}s Rush</button>
+    <SettingsPanel settings={settings} onChange={onSettingsChange} />
+
+    <div className="dashboard-grid">
+      <section className="dashboard-card"><div className="section-title"><span>Family Leaderboard</span></div><Leaderboard leaderboard={leaderboard} /></section>
+      <section className="dashboard-card"><div className="section-title"><span>Recent Rushes</span></div><History history={history} /></section>
+    </div>
   </section></main>;
 }
