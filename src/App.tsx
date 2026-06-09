@@ -4,35 +4,55 @@ import { applyLevelProgression } from './engine/progressionEngine';
 import { accuracy, rushXp } from './engine/scoringEngine';
 import { playSound, setMusicEnabled } from './engine/soundEngine';
 import { GameScreen, rankSkills, type RushSummary } from './components/GameScreen';
+import { PlayerSelectScreen } from './components/PlayerSelectScreen';
 import { ResultsScreen, type RushResult } from './components/ResultsScreen';
 import { StartScreen } from './components/StartScreen';
-import { cloneSkillStats, createPlayer, initializeAppData, makeRushResultId, savePlayer, saveRushResult, saveSettings, selectPlayer } from './storage/db';
-import type { AppData, AppSettings, Screen, Skill } from './types/game';
+import { createPlayer, getAppData, getPlayerHistory, saveRushResult, updatePlayerSettings } from './storage/api';
+import type { AppData, AppSettings, CreatePlayerInput, PlayerData, RoundSeconds, RushHistoryRecord, Screen, Skill } from './types/game';
+
+const DEFAULT_ROUND_SECONDS: RoundSeconds = 60;
+
+function cloneSkillStats(stats: PlayerData['skillStats']) {
+  return {
+    addition: { ...stats.addition },
+    subtraction: { ...stats.subtraction },
+    multiplication: { ...stats.multiplication },
+    division: { ...stats.division },
+    mixed: { ...stats.mixed },
+  };
+}
+
+function settingsFromPlayer(player: PlayerData): AppSettings {
+  return { soundEnabled: player.soundEnabled, musicEnabled: player.musicEnabled };
+}
 
 function App() {
   const [appData, setAppData] = useState<AppData | null>(null);
+  const [selectedPlayer, setSelectedPlayer] = useState<PlayerData | null>(null);
+  const [history, setHistory] = useState<RushHistoryRecord[]>([]);
+  const [roundSeconds, setRoundSeconds] = useState<RoundSeconds>(DEFAULT_ROUND_SECONDS);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [screen, setScreen] = useState<Screen>('start');
+  const [screen, setScreen] = useState<Screen>('choose');
   const [countdown, setCountdown] = useState<3 | 2 | 1 | 'GO'>(3);
   const [lastResult, setLastResult] = useState<RushResult | null>(null);
   const [gameKey, setGameKey] = useState(0);
 
   useEffect(() => {
     let alive = true;
-    initializeAppData()
+    getAppData()
       .then((data) => { if (alive) setAppData(data); })
-      .catch(() => { if (alive) setLoadError('Could not open the local game database. Check that IndexedDB is enabled in this browser.'); });
+      .catch((error: Error) => { if (alive) setLoadError(error.message || 'Could not reach the Math Rush server API.'); });
     return () => { alive = false; };
   }, []);
 
   useEffect(() => {
-    setMusicEnabled(Boolean(appData?.settings.musicEnabled));
+    setMusicEnabled(Boolean(selectedPlayer?.musicEnabled));
     return () => setMusicEnabled(false);
-  }, [appData?.settings.musicEnabled]);
+  }, [selectedPlayer?.musicEnabled]);
 
   useEffect(() => {
-    if (screen !== 'countdown' || !appData) return;
-    playSound('countdown', appData.settings.soundEnabled);
+    if (screen !== 'countdown' || !selectedPlayer) return;
+    playSound('countdown', selectedPlayer.soundEnabled);
     const id = window.setTimeout(() => {
       setCountdown((current) => {
         if (current === 3) return 2;
@@ -44,39 +64,60 @@ function App() {
       });
     }, countdown === 'GO' ? 650 : 800);
     return () => window.clearTimeout(id);
-  }, [appData, countdown, screen]);
-
-  const updateSettings = async (settings: AppSettings) => {
-    if (!appData) return;
-    const nextSettings = { ...settings, selectedPlayerId: appData.player.id };
-    const next = { ...appData, settings: nextSettings };
-    setAppData(next);
-    await saveSettings(nextSettings);
-  };
+  }, [countdown, screen, selectedPlayer]);
 
   const handleSelectPlayer = async (playerId: string) => {
-    const next = await selectPlayer(playerId);
-    setAppData(next);
+    if (!appData) return;
+    const player = appData.players.find((candidate) => candidate.id === playerId);
+    if (!player) return;
+    setSelectedPlayer(player);
+    setLastResult(null);
+    setScreen('start');
+    try {
+      setHistory(await getPlayerHistory(player.id));
+    } catch {
+      setHistory([]);
+    }
+  };
+
+  const handleAddPlayer = async (input: CreatePlayerInput) => {
+    const response = await createPlayer(input);
+    setAppData({ players: response.players, leaderboard: response.leaderboard });
+    setSelectedPlayer(response.player);
+    setHistory([]);
     setLastResult(null);
     setScreen('start');
   };
 
-  const handleAddPlayer = async (name: string) => {
-    const next = await createPlayer(name);
-    setAppData(next);
+  const handleBackToPlayers = () => {
+    setSelectedPlayer(null);
+    setHistory([]);
     setLastResult(null);
-    setScreen('start');
+    setScreen('choose');
+  };
+
+  const updateSettings = async (settings: AppSettings) => {
+    if (!appData || !selectedPlayer) return;
+    const optimisticPlayer = { ...selectedPlayer, ...settings, updatedAt: new Date().toISOString() };
+    setSelectedPlayer(optimisticPlayer);
+    setAppData({
+      ...appData,
+      players: appData.players.map((player) => player.id === optimisticPlayer.id ? optimisticPlayer : player),
+    });
+    const response = await updatePlayerSettings(selectedPlayer.id, settings);
+    setSelectedPlayer(response.player);
+    setAppData({ players: response.players, leaderboard: response.leaderboard });
   };
 
   const start = () => {
-    if (!appData) return;
+    if (!selectedPlayer) return;
     setCountdown(3);
     setScreen('countdown');
   };
 
   const finish = async (summary: RushSummary) => {
-    if (!appData) return;
-    const player = appData.player;
+    if (!appData || !selectedPlayer) return;
+    const player = selectedPlayer;
     const correct = summary.answers.filter((a) => a.correct).length;
     const wrong = summary.answers.length - correct;
     const acc = accuracy(correct, wrong);
@@ -98,7 +139,7 @@ function App() {
       };
     }
 
-    const updatedPlayer = {
+    const updatedPlayer: PlayerData = {
       ...player,
       level: levelAfter,
       xp: xpAfter,
@@ -112,6 +153,7 @@ function App() {
     };
 
     const result: RushResult = {
+      roundSeconds,
       score: summary.score,
       correct,
       wrong,
@@ -129,19 +171,14 @@ function App() {
       averageTimeMs,
     };
 
-    const nextAppData: AppData = {
-      ...appData,
-      player: updatedPlayer,
-      players: appData.players.map((candidate) => candidate.id === updatedPlayer.id ? updatedPlayer : candidate),
-    };
-
-    setAppData(nextAppData);
+    setSelectedPlayer(updatedPlayer);
+    setAppData({ ...appData, players: appData.players.map((candidate) => candidate.id === updatedPlayer.id ? updatedPlayer : candidate) });
     setLastResult(result);
     setScreen('results');
-    await savePlayer(updatedPlayer);
-    await saveRushResult({
-      id: makeRushResultId(),
+
+    const response = await saveRushResult({
       playerId: updatedPlayer.id,
+      roundSeconds,
       score: result.score,
       correct: result.correct,
       wrong: result.wrong,
@@ -151,25 +188,30 @@ function App() {
       levelBefore: result.levelBefore,
       levelAfter: result.levelAfter,
       averageTimeMs: result.averageTimeMs,
-      playedAt: new Date().toISOString(),
+      hiddenDifficultyAdjustment: hiddenAfter,
+      skillStatsDelta: ranked.stats,
     });
-    if (newBest) window.setTimeout(() => playSound('newBest', nextAppData.settings.soundEnabled), 250);
+    setSelectedPlayer(response.player);
+    setAppData({ players: response.players, leaderboard: response.leaderboard });
+    setHistory(response.history);
+    if (newBest) window.setTimeout(() => playSound('newBest', response.player.soundEnabled), 250);
   };
 
   if (loadError) {
-    return <div className="app-shell"><div className="orb one" /><div className="orb two" /><div className="scanlines" /><main className="screen center"><section className="hero"><p className="eyebrow">Local Database Error</p><h1>Math Rush</h1><p className="copy">{loadError}</p></section></main></div>;
+    return <div className="app-shell"><div className="orb one" /><div className="orb two" /><div className="scanlines" /><main className="screen center"><section className="hero"><p className="eyebrow">Server Error</p><h1>Math Rush</h1><p className="copy">{loadError}</p><p className="copy">Make sure the Math Rush API is running on the home server.</p></section></main></div>;
   }
 
   if (!appData) {
-    return <div className="app-shell"><div className="orb one" /><div className="orb two" /><div className="scanlines" /><main className="screen center"><section className="hero"><p className="eyebrow">Loading</p><h1>Math Rush</h1><p className="copy">Opening local database...</p></section></main></div>;
+    return <div className="app-shell"><div className="orb one" /><div className="orb two" /><div className="scanlines" /><main className="screen center"><section className="hero"><p className="eyebrow">Loading</p><h1>Math Rush</h1><p className="copy">Connecting to shared family server...</p></section></main></div>;
   }
 
   return <div className="app-shell">
     <div className="orb one" /><div className="orb two" /><div className="scanlines" />
-    {screen === 'start' && <StartScreen appData={appData} onStart={start} onSettingsChange={updateSettings} onSelectPlayer={handleSelectPlayer} onAddPlayer={handleAddPlayer} />}
+    {screen === 'choose' && <PlayerSelectScreen players={appData.players} leaderboard={appData.leaderboard} onSelectPlayer={handleSelectPlayer} onAddPlayer={handleAddPlayer} />}
+    {screen === 'start' && selectedPlayer && <StartScreen player={selectedPlayer} leaderboard={appData.leaderboard} history={history} roundSeconds={roundSeconds} onRoundSecondsChange={setRoundSeconds} onStart={start} onSettingsChange={updateSettings} onBackToPlayers={handleBackToPlayers} />}
     {screen === 'countdown' && <main className="screen center"><div className="countdown"><span>{countdown}</span></div></main>}
-    {screen === 'game' && <GameScreen key={gameKey} level={appData.player.level} hiddenDifficultyAdjustment={appData.player.hiddenDifficultyAdjustment} settings={appData.settings} onFinished={finish} />}
-    {screen === 'results' && lastResult && <ResultsScreen result={lastResult} bestScore={appData.player.bestScore} onPlayAgain={start} onBack={() => setScreen('start')} />}
+    {screen === 'game' && selectedPlayer && <GameScreen key={gameKey} level={selectedPlayer.level} hiddenDifficultyAdjustment={selectedPlayer.hiddenDifficultyAdjustment} settings={settingsFromPlayer(selectedPlayer)} roundSeconds={roundSeconds} onFinished={finish} />}
+    {screen === 'results' && selectedPlayer && lastResult && <ResultsScreen result={lastResult} bestScore={selectedPlayer.bestScore} onPlayAgain={start} onBack={() => setScreen('start')} />}
   </div>;
 }
 
