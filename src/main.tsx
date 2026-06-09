@@ -5,6 +5,7 @@ import './styles/app.css';
 import './styles/local-db.css';
 import './styles/family.css';
 import './styles/compact-layout.css';
+import './styles/gameResults.css';
 
 ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
   <React.StrictMode>
