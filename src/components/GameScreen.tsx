@@ -13,7 +13,7 @@ export type AnswerRecord = { question: Question; correct: boolean; timeMs: numbe
 export type RushSummary = { score: number; bestStreak: number; answers: AnswerRecord[]; roundSeconds: RoundSeconds };
 
 export function GameScreen({ level, hiddenDifficultyAdjustment, settings, roundSeconds, onFinished }: { level: number; hiddenDifficultyAdjustment: number; settings: AppSettings; roundSeconds: RoundSeconds; onFinished: (s: RushSummary) => void }) {
-  const [secondsLeft, setSecondsLeft] = useState(roundSeconds);
+  const [secondsLeft, setSecondsLeft] = useState<number>(roundSeconds);
   const [question, setQuestion] = useState(() => generateQuestion(level, hiddenDifficultyAdjustment));
   const [value, setValue] = useState('');
   const [feedback, setFeedback] = useState<'idle' | 'correct' | 'wrong'>('idle');
