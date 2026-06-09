@@ -3,7 +3,7 @@ import { getLevel } from '../engine/levels';
 import { generateQuestion } from '../engine/questionGenerator';
 import { scoreAnswer } from '../engine/scoringEngine';
 import { playSound } from '../engine/soundEngine';
-import type { Question, SaveData, Skill } from '../types/game';
+import type { AppSettings, Question, Skill } from '../types/game';
 import { LevelBadge } from './LevelBadge';
 import { QuestionCard } from './QuestionCard';
 import { ScorePanel } from './ScorePanel';
@@ -13,7 +13,7 @@ export const RUSH_SECONDS = 90;
 export type AnswerRecord = { question: Question; correct: boolean; timeMs: number; fast: boolean; streak: number };
 export type RushSummary = { score: number; bestStreak: number; answers: AnswerRecord[] };
 
-export function GameScreen({ level, hiddenDifficultyAdjustment, settings, onFinished }: { level: number; hiddenDifficultyAdjustment: number; settings: SaveData['settings']; onFinished: (s: RushSummary) => void }) {
+export function GameScreen({ level, hiddenDifficultyAdjustment, settings, onFinished }: { level: number; hiddenDifficultyAdjustment: number; settings: AppSettings; onFinished: (s: RushSummary) => void }) {
   const [secondsLeft, setSecondsLeft] = useState(RUSH_SECONDS);
   const [question, setQuestion] = useState(() => generateQuestion(level, hiddenDifficultyAdjustment));
   const [value, setValue] = useState('');
