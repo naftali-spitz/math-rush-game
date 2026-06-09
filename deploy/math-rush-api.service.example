@@ -1,0 +1,15 @@
+[Unit]
+Description=Math Rush API
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/naf-w/projects/self/math-rush-game/server
+Environment=NODE_ENV=production
+Environment=PORT=3001
+ExecStart=/usr/bin/npm run start
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
