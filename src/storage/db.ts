@@ -96,10 +96,23 @@ async function getOne<T>(db: IDBDatabase, storeName: string, key: IDBValidKey) {
   return requestToPromise<T | undefined>(transaction.objectStore(storeName).get(key));
 }
 
-async function putOne<T>(db: IDBDatabase, storeName: string, value: T) {
+async function putOne(db: IDBDatabase, storeName: string, value: unknown) {
   const transaction = db.transaction(storeName, 'readwrite');
   transaction.objectStore(storeName).put(value);
   await transactionDone(transaction);
+}
+
+function normalizeSkillStats(stats: Partial<Record<Skill, SkillStats>> | undefined) {
+  const base = createDefaultSkillStats();
+  if (!stats) return base;
+  for (const skill of SKILLS) {
+    base[skill] = { ...base[skill], ...stats[skill] };
+  }
+  return base;
+}
+
+function numberOrFallback(value: unknown, fallback: number) {
+  return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
 }
 
 function migrateLegacyLocalStoragePlayer(): PlayerData | null {
@@ -108,14 +121,19 @@ function migrateLegacyLocalStoragePlayer(): PlayerData | null {
     if (!raw) return null;
     const legacy = JSON.parse(raw) as { player?: Partial<PlayerData> };
     if (!legacy.player) return null;
-    const player = createDefaultPlayer(legacy.player.name || 'Player');
+    const base = createDefaultPlayer(typeof legacy.player.name === 'string' && legacy.player.name.trim() ? legacy.player.name : 'Player');
+    const now = new Date().toISOString();
     return {
-      ...player,
-      ...legacy.player,
-      id: player.id,
-      skillStats: { ...createDefaultSkillStats(), ...legacy.player.skillStats },
-      createdAt: player.createdAt,
-      updatedAt: new Date().toISOString(),
+      ...base,
+      level: numberOrFallback(legacy.player.level, base.level),
+      xp: numberOrFallback(legacy.player.xp, base.xp),
+      bestScore: numberOrFallback(legacy.player.bestScore, base.bestScore),
+      gamesPlayed: numberOrFallback(legacy.player.gamesPlayed, base.gamesPlayed),
+      totalCorrect: numberOrFallback(legacy.player.totalCorrect, base.totalCorrect),
+      totalWrong: numberOrFallback(legacy.player.totalWrong, base.totalWrong),
+      hiddenDifficultyAdjustment: numberOrFallback(legacy.player.hiddenDifficultyAdjustment, base.hiddenDifficultyAdjustment),
+      skillStats: normalizeSkillStats(legacy.player.skillStats),
+      updatedAt: now,
     };
   } catch {
     return null;
