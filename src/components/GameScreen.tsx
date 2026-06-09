@@ -83,8 +83,8 @@ export function GameScreen({ level, hiddenDifficultyAdjustment, settings, roundS
   }, [level, locked, nextQuestion, question, settings.soundEnabled, streak, value]);
 
   const levelInfo = getLevel(level);
-  return <main className={secondsLeft <= 10 ? 'screen game danger-bg' : 'screen game'}>
-    <div className="topbar"><TimerBar secondsLeft={secondsLeft} totalSeconds={roundSeconds} /><LevelBadge level={levelInfo.level} label={levelInfo.title} /></div>
+  return <main className={secondsLeft <= 5 ? 'screen game danger-bg final-countdown' : secondsLeft <= 10 ? 'screen game danger-bg' : 'screen game'}>
+    <div className="topbar"><TimerBar secondsLeft={secondsLeft} totalSeconds={roundSeconds} soundEnabled={settings.soundEnabled} /><LevelBadge level={levelInfo.level} label={levelInfo.title} /></div>
     <ScorePanel score={score} streak={streak} bestStreak={bestStreak} correct={correct} wrong={wrong} pulse={pulse} />
     <QuestionCard question={question} value={value} feedback={feedback} correctAnswer={correctAnswer} disabled={locked} onChange={setValue} onSubmit={submit} />
     <p className="hint">{roundSeconds}s Rush · Numbers · Backspace · Minus · Enter</p>
