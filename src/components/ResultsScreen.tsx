@@ -1,9 +1,10 @@
-import type { Skill } from '../types/game';
+import type { RoundSeconds, Skill } from '../types/game';
 import { getLevel } from '../engine/levels';
 import { levelProgress } from '../engine/progressionEngine';
 import { LevelBadge } from './LevelBadge';
 
 export type RushResult = {
+  roundSeconds: RoundSeconds;
   score: number;
   correct: number;
   wrong: number;
@@ -27,12 +28,12 @@ export function ResultsScreen({ result, bestScore, onPlayAgain, onBack }: { resu
   const level = getLevel(result.levelAfter);
   const progress = levelProgress(result.levelAfter, result.xpAfter);
   return <main className={result.newBest ? 'screen center best' : 'screen center'}><section className="hero results">
-    <p className="eyebrow">Rush Complete</p>
+    <p className="eyebrow">{result.roundSeconds}s Rush Complete</p>
     <h1>{result.newBest ? 'New Best!' : 'Results'}</h1>
     <div className="result-score">{result.score}</div>
-    <p className="copy">Best score: {bestScore}</p>
+    <p className="copy">Shared family best score: {bestScore}</p>
     <div className="result-grid">
-      <div className="stat"><span>Correct</span><b>{result.correct}</b></div><div className="stat"><span>Wrong</span><b>{result.wrong}</b></div><div className="stat"><span>Accuracy</span><b>{result.accuracy}%</b></div><div className="stat"><span>Best Streak</span><b>{result.bestStreak}</b></div><div className="stat"><span>XP Earned</span><b>+{result.xpEarned}</b></div><div className="stat"><span>Avg Speed</span><b>{(result.averageTimeMs / 1000).toFixed(1)}s</b></div>
+      <div className="stat"><span>Round</span><b>{result.roundSeconds}s</b></div><div className="stat"><span>Correct</span><b>{result.correct}</b></div><div className="stat"><span>Wrong</span><b>{result.wrong}</b></div><div className="stat"><span>Accuracy</span><b>{result.accuracy}%</b></div><div className="stat"><span>Best Streak</span><b>{result.bestStreak}</b></div><div className="stat"><span>XP Earned</span><b>+{result.xpEarned}</b></div><div className="stat"><span>Avg Speed</span><b>{(result.averageTimeMs / 1000).toFixed(1)}s</b></div>
     </div>
     <div className="level-row"><LevelBadge level={level.level} label={level.title} />{result.levelAfter > result.levelBefore && <span className="chip">Level Up!</span>}</div>
     <div className="progress"><div><span>{result.xpAfter} XP total</span><b>{progress.percent}%</b></div><i><em style={{ width: `${progress.percent}%` }} /></i><small>{progress.next ? `${progress.remaining} XP to next level` : 'Maximum level reached'}</small></div>
