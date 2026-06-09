@@ -42,6 +42,7 @@ export function StartScreen({ player, leaderboard, history, roundSeconds, onRoun
   const level = getLevel(player.level);
   const progress = levelProgress(player.level, player.xp);
   const settings = { soundEnabled: player.soundEnabled, musicEnabled: player.musicEnabled };
+  const ringBackground = `conic-gradient(#69ffe5 0 ${progress.percent}%, rgba(255,255,255,.1) ${progress.percent}%)`;
 
   return <main className="screen compact-screen"><section className="hero player-home compact-card home-dashboard">
     <div className="home-top-grid">
@@ -70,7 +71,7 @@ export function StartScreen({ player, leaderboard, history, roundSeconds, onRoun
     <div className="home-main-grid">
       <section className="arcade-panel progress-focus">
         <p className="eyebrow">Level Progress</p>
-        <div className="progress-ring" style={{ '--progress': `${progress.percent}%` } as React.CSSProperties}>
+        <div className="progress-ring" style={{ background: ringBackground }}>
           <div><b>{progress.percent}%</b><small>{progress.next ? `${progress.remaining} XP to next` : 'Max level'}</small></div>
         </div>
         <div className="start-stats compact-stats"><div className="stat"><span>Best</span><b>{player.bestScore}</b></div><div className="stat"><span>XP</span><b>{player.xp}</b></div><div className="stat"><span>Games</span><b>{player.gamesPlayed}</b></div></div>
