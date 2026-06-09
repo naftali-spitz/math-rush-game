@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { getLevel } from '../engine/levels';
 import { levelProgress } from '../engine/progressionEngine';
 import type { AppSettings, LeaderboardEntry, PlayerData, RoundSeconds, RushHistoryRecord } from '../types/game';
@@ -7,16 +6,14 @@ import { SettingsPanel } from './SettingsPanel';
 
 const roundOptions: RoundSeconds[] = [30, 60, 90];
 const dateFormat = new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
-type HomeTab = 'progress' | 'history' | 'leaderboard';
 
 function Avatar({ player }: { player: PlayerData }) {
   return <span className={`avatar large ${player.avatarColor}`}>{player.avatarIcon}</span>;
 }
 
 function Leaderboard({ leaderboard }: { leaderboard: LeaderboardEntry[] }) {
-  if (!leaderboard.length) return <p className="empty-state">No scores yet.</p>;
   return <ol className="leaderboard-list compact-list">
-    {leaderboard.slice(0, 6).map((entry, index) => <li key={entry.id}>
+    {leaderboard.slice(0, 5).map((entry, index) => <li key={entry.id}>
       <span className="rank">#{index + 1}</span>
       <span className={`avatar mini ${entry.avatarColor}`}>{entry.avatarIcon}</span>
       <span>{entry.name}</span>
@@ -28,7 +25,7 @@ function Leaderboard({ leaderboard }: { leaderboard: LeaderboardEntry[] }) {
 function History({ history }: { history: RushHistoryRecord[] }) {
   if (!history.length) return <p className="empty-state">No rushes yet for this player.</p>;
   return <div className="history-list">
-    {history.slice(0, 6).map((item) => <div key={item.id} className="history-row">
+    {history.slice(0, 5).map((item) => <div key={item.id} className="history-row">
       <b>{item.score}</b>
       <span>{item.roundSeconds}s</span>
       <span>{item.accuracy}%</span>
@@ -38,57 +35,40 @@ function History({ history }: { history: RushHistoryRecord[] }) {
 }
 
 export function StartScreen({ player, leaderboard, history, roundSeconds, onRoundSecondsChange, onStart, onSettingsChange, onBackToPlayers }: { player: PlayerData; leaderboard: LeaderboardEntry[]; history: RushHistoryRecord[]; roundSeconds: RoundSeconds; onRoundSecondsChange: (roundSeconds: RoundSeconds) => void; onStart: () => void; onSettingsChange: (settings: AppSettings) => void; onBackToPlayers: () => void }) {
-  const [tab, setTab] = useState<HomeTab>('progress');
   const level = getLevel(player.level);
   const progress = levelProgress(player.level, player.xp);
   const settings = { soundEnabled: player.soundEnabled, musicEnabled: player.musicEnabled };
-  const ringBackground = `conic-gradient(#69ffe5 0 ${progress.percent}%, rgba(255,255,255,.1) ${progress.percent}%)`;
 
-  return <main className="screen compact-screen"><section className="hero player-home compact-card home-dashboard">
-    <div className="home-top-grid">
-      <section className="home-identity arcade-panel">
+  return <main className="screen center"><section className="hero player-home">
+    <div className="player-home-top">
+      <div className="player-title">
         <Avatar player={player} />
         <div>
-          <p className="eyebrow">Ready Player</p>
+          <p className="eyebrow">Player Ready</p>
           <h1>{player.name}</h1>
-          <LevelBadge level={level.level} label={level.title} />
         </div>
-      </section>
-
-      <section className="home-start-zone arcade-panel">
-        <button className="primary big-start-button" onClick={onStart}>Start {roundSeconds}s Rush</button>
-        <div className="round-options centered-rounds">
-          {roundOptions.map((option) => <button key={option} className={roundSeconds === option ? 'round-choice active' : 'round-choice'} onClick={() => onRoundSecondsChange(option)}>{option}s</button>)}
-        </div>
-      </section>
-
-      <section className="home-controls arcade-panel">
-        <SettingsPanel settings={settings} onChange={onSettingsChange} />
-        <button className="secondary switch-player-button" onClick={onBackToPlayers}>Switch Player</button>
-      </section>
+      </div>
+      <button className="secondary" onClick={onBackToPlayers}>Switch Player</button>
     </div>
 
-    <div className="home-main-grid">
-      <section className="arcade-panel progress-focus">
-        <p className="eyebrow">Level Progress</p>
-        <div className="progress-ring" style={{ background: ringBackground }}>
-          <div><b>{progress.percent}%</b><small>{progress.next ? `${progress.remaining} XP to next` : 'Max level'}</small></div>
-        </div>
-        <div className="start-stats compact-stats"><div className="stat"><span>Best</span><b>{player.bestScore}</b></div><div className="stat"><span>XP</span><b>{player.xp}</b></div><div className="stat"><span>Games</span><b>{player.gamesPlayed}</b></div></div>
-      </section>
+    <p className="copy">Answer fast. Build streaks. Level up. Keep your rhythm clean and your family score climbing.</p>
 
-      <section className="arcade-panel info-tabs-panel">
-        <div className="panel-tabs">
-          <button className={tab === 'progress' ? 'tab active' : 'tab'} onClick={() => setTab('progress')}>Progress</button>
-          <button className={tab === 'history' ? 'tab active' : 'tab'} onClick={() => setTab('history')}>History</button>
-          <button className={tab === 'leaderboard' ? 'tab active' : 'tab'} onClick={() => setTab('leaderboard')}>Board</button>
-        </div>
-        <div className="panel-body">
-          {tab === 'progress' && <div className="progress-copy"><h2>{level.description}</h2><p className="copy">Keep accuracy high to unlock the next level. Fast answers and streaks add bonus XP.</p></div>}
-          {tab === 'history' && <History history={history} />}
-          {tab === 'leaderboard' && <Leaderboard leaderboard={leaderboard} />}
-        </div>
-      </section>
+    <div className="start-stats"><LevelBadge level={level.level} label={level.title} /><div className="stat"><span>Best Score</span><b>{player.bestScore}</b></div><div className="stat"><span>XP</span><b>{player.xp}</b></div></div>
+    <div className="progress"><div><span>{level.description}</span><b>{progress.percent}%</b></div><i><em style={{ width: `${progress.percent}%` }} /></i><small>{progress.next ? `${progress.remaining} XP to next level` : 'Maximum level reached'}</small></div>
+
+    <div className="round-panel">
+      <span className="micro-label">Rush Length</span>
+      <div className="round-options">
+        {roundOptions.map((option) => <button key={option} className={roundSeconds === option ? 'round-choice active' : 'round-choice'} onClick={() => onRoundSecondsChange(option)}>{option}s</button>)}
+      </div>
+    </div>
+
+    <button className="primary" onClick={onStart}>Start {roundSeconds}s Rush</button>
+    <SettingsPanel settings={settings} onChange={onSettingsChange} />
+
+    <div className="dashboard-grid">
+      <section className="dashboard-card"><div className="section-title"><span>Family Leaderboard</span></div><Leaderboard leaderboard={leaderboard} /></section>
+      <section className="dashboard-card"><div className="section-title"><span>Recent Rushes</span></div><History history={history} /></section>
     </div>
   </section></main>;
 }
