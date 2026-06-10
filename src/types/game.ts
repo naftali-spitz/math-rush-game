@@ -1,6 +1,7 @@
 export type Skill = 'addition' | 'subtraction' | 'multiplication' | 'division' | 'mixed';
 export type AvatarColor = 'cyan' | 'purple' | 'yellow' | 'pink' | 'green' | 'orange' | 'blue';
 export type ThemeColor = AvatarColor;
+export type StyleTheme = 'futuristic' | 'modern' | 'kids';
 export type RoundSeconds = 30 | 60 | 90;
 
 export type Question = {
@@ -30,6 +31,7 @@ export type PlayerData = {
   avatarIcon: string;
   avatarColor: AvatarColor;
   themeColor: ThemeColor;
+  styleTheme: StyleTheme;
   soundEnabled: boolean;
   musicEnabled: boolean;
   skillStats: Record<Skill, SkillStats>;
@@ -41,6 +43,7 @@ export type AppSettings = {
   soundEnabled: boolean;
   musicEnabled: boolean;
   themeColor: ThemeColor;
+  styleTheme: StyleTheme;
 };
 
 export type LeaderboardEntry = {
@@ -52,6 +55,7 @@ export type LeaderboardEntry = {
   avatarIcon: string;
   avatarColor: AvatarColor;
   themeColor: ThemeColor;
+  styleTheme: StyleTheme;
 };
 
 export type AppData = {
@@ -80,6 +84,7 @@ export type CreatePlayerInput = {
   avatarIcon: string;
   avatarColor: AvatarColor;
   themeColor?: ThemeColor;
+  styleTheme?: StyleTheme;
 };
 
 export type SaveRushResultInput = {
