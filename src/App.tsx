@@ -209,7 +209,7 @@ function App() {
     <div className="orb one" /><div className="orb two" /><div className="scanlines" />
     {screen === 'choose' && <PlayerSelectScreen players={appData.players} leaderboard={appData.leaderboard} onSelectPlayer={handleSelectPlayer} onAddPlayer={handleAddPlayer} />}
     {screen === 'start' && selectedPlayer && <StartScreen player={selectedPlayer} leaderboard={appData.leaderboard} history={history} roundSeconds={roundSeconds} onRoundSecondsChange={setRoundSeconds} onStart={start} onSettingsChange={updateSettings} onBackToPlayers={handleBackToPlayers} />}
-    {screen === 'countdown' && <main className="screen center"><div className="countdown"><span>{countdown}</span></div></main>}
+    {screen === 'countdown' && <main className="screen center"><div className="countdown"><span className={countdown === 'GO' ? 'go' : undefined}>{countdown}</span></div></main>}
     {screen === 'game' && selectedPlayer && <GameScreen key={gameKey} level={selectedPlayer.level} hiddenDifficultyAdjustment={selectedPlayer.hiddenDifficultyAdjustment} settings={settingsFromPlayer(selectedPlayer)} roundSeconds={roundSeconds} onFinished={finish} />}
     {screen === 'results' && selectedPlayer && lastResult && <ResultsScreen result={lastResult} bestScore={selectedPlayer.bestScore} onPlayAgain={start} onBack={() => setScreen('start')} />}
   </div>;
