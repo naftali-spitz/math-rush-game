@@ -32,15 +32,15 @@ const TIMER_MILESTONES: TimerMilestone[] = [50, 75, 90, 95];
 function createBurst(count: number, colors: string[]): Particle[] {
   return Array.from({ length: count }, (_, index) => {
     const angle = (index / count) * Math.PI * 2 + (Math.random() - 0.5) * 0.55;
-    const distance = 65 + Math.random() * 65;
+    const distance = 38 + Math.random() * 42;
     return {
       id: particleId++,
       tx: Math.cos(angle) * distance,
       ty: Math.sin(angle) * distance,
       col: colors[index % colors.length],
-      sz: 3.5 + Math.random() * 5,
-      dur: 0.45 + Math.random() * 0.28,
-      sq: Math.random() < 0.4,
+      sz: 2.5 + Math.random() * 3.5,
+      dur: 0.32 + Math.random() * 0.18,
+      sq: Math.random() < 0.32,
     };
   });
 }
@@ -162,18 +162,19 @@ export function GameScreen({ level, hiddenDifficultyAdjustment, settings, roundS
       setCorrect((current) => current + 1);
       setFeedback('correct');
       setPulse(true);
-      flash('flash-correct', 320);
-      addBurst(createBurst(scored.combo ? 20 : 13, BURST_COLORS));
+      flash('flash-correct', 180);
+      if (scored.combo) addBurst(createBurst(8, BURST_COLORS));
+      else addBurst(createBurst(4, BURST_COLORS));
       playSound(scored.combo ? 'streak' : 'correct', settings.soundEnabled, nextStreak);
-      window.setTimeout(() => setPulse(false), 220);
-      timeoutRef.current = window.setTimeout(nextQuestion, scored.combo ? 360 : 185);
+      window.setTimeout(() => setPulse(false), 180);
+      timeoutRef.current = window.setTimeout(nextQuestion, scored.combo ? 330 : 185);
     } else {
       setStreak(0);
       setWrong((current) => current + 1);
       setFeedback('wrong');
       setCorrectAnswer(question.answer);
-      flash('flash-wrong', 420);
-      addBurst(createBurst(7, WRONG_COLORS));
+      flash('flash-wrong', 360);
+      addBurst(createBurst(6, WRONG_COLORS));
       playSound('wrong', settings.soundEnabled);
       timeoutRef.current = window.setTimeout(nextQuestion, 950);
     }
