@@ -5,6 +5,7 @@ import './styles/app.css';
 import './styles/local-db.css';
 import './styles/family.css';
 import './styles/theme.css';
+import './styles/style-themes.css';
 
 ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
   <React.StrictMode>
