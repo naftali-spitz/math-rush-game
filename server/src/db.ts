@@ -13,12 +13,15 @@ db.pragma('foreign_keys = ON');
 export const skills = ['addition', 'subtraction', 'multiplication', 'division', 'mixed'] as const;
 type Skill = typeof skills[number];
 type AvatarColor = 'cyan' | 'purple' | 'yellow' | 'pink' | 'green' | 'orange' | 'blue';
+type ThemeColor = AvatarColor;
+
+const themeColors = new Set<ThemeColor>(['cyan', 'purple', 'yellow', 'pink', 'green', 'orange', 'blue']);
 
 type SkillStats = { correct: number; wrong: number; totalTimeMs: number };
 type PlayerRow = {
   id: string; name: string; level: number; xp: number; bestScore: number; gamesPlayed: number;
   totalCorrect: number; totalWrong: number; hiddenDifficultyAdjustment: number; avatarIcon: string;
-  avatarColor: AvatarColor; soundEnabled: number; musicEnabled: number; createdAt: string; updatedAt: string;
+  avatarColor: AvatarColor; themeColor: ThemeColor; soundEnabled: number; musicEnabled: number; createdAt: string; updatedAt: string;
 };
 
 type Player = Omit<PlayerRow, 'soundEnabled' | 'musicEnabled'> & {
@@ -48,6 +51,9 @@ function id() { return crypto.randomUUID(); }
 function bool(n: number) { return n === 1; }
 function int(value: unknown, fallback = 0) { const n = Number(value); return Number.isFinite(n) ? Math.trunc(n) : fallback; }
 function num(value: unknown, fallback = 0) { const n = Number(value); return Number.isFinite(n) ? n : fallback; }
+function cleanThemeColor(value: unknown, fallback: ThemeColor = 'cyan'): ThemeColor {
+  return themeColors.has(value as ThemeColor) ? value as ThemeColor : fallback;
+}
 
 export function initSchema() {
   db.exec(`
@@ -63,6 +69,7 @@ export function initSchema() {
       hiddenDifficultyAdjustment REAL NOT NULL DEFAULT 0,
       avatarIcon TEXT NOT NULL DEFAULT '🚀',
       avatarColor TEXT NOT NULL DEFAULT 'cyan',
+      themeColor TEXT NOT NULL DEFAULT 'cyan',
       soundEnabled INTEGER NOT NULL DEFAULT 1,
       musicEnabled INTEGER NOT NULL DEFAULT 0,
       createdAt TEXT NOT NULL,
@@ -95,6 +102,12 @@ export function initSchema() {
     );
     CREATE INDEX IF NOT EXISTS idx_rush_results_player_played ON rush_results(playerId, playedAt DESC);
   `);
+
+  try {
+    db.prepare('SELECT themeColor FROM players LIMIT 1').get();
+  } catch {
+    db.exec("ALTER TABLE players ADD COLUMN themeColor TEXT NOT NULL DEFAULT 'cyan'");
+  }
 }
 
 function emptySkillStats(): Record<Skill, SkillStats> {
@@ -115,7 +128,7 @@ function getSkillStats(playerId: string) {
 }
 
 function toPlayer(row: PlayerRow): Player {
-  return { ...row, soundEnabled: bool(row.soundEnabled), musicEnabled: bool(row.musicEnabled), skillStats: getSkillStats(row.id) };
+  return { ...row, themeColor: cleanThemeColor(row.themeColor), soundEnabled: bool(row.soundEnabled), musicEnabled: bool(row.musicEnabled), skillStats: getSkillStats(row.id) };
 }
 
 export function getPlayers() {
@@ -129,33 +142,35 @@ export function getPlayer(playerId: string) {
 }
 
 export function getLeaderboard() {
-  return db.prepare('SELECT id, name, level, bestScore, gamesPlayed, avatarIcon, avatarColor FROM players ORDER BY bestScore DESC, xp DESC, name ASC LIMIT 10').all();
+  return db.prepare('SELECT id, name, level, bestScore, gamesPlayed, avatarIcon, avatarColor, themeColor FROM players ORDER BY bestScore DESC, xp DESC, name ASC LIMIT 10').all();
 }
 
-export function createPlayer(input: { name: string; avatarIcon?: string; avatarColor?: AvatarColor }) {
+export function createPlayer(input: { name: string; avatarIcon?: string; avatarColor?: AvatarColor; themeColor?: ThemeColor }) {
   const cleanName = String(input.name ?? '').trim().slice(0, 18);
   if (!cleanName) throw new Error('Player name is required.');
   const playerId = id();
   const createdAt = now();
-  db.prepare('INSERT INTO players (id, name, avatarIcon, avatarColor, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?)')
-    .run(playerId, cleanName, input.avatarIcon || '🚀', input.avatarColor || 'cyan', createdAt, createdAt);
+  const themeColor = cleanThemeColor(input.themeColor, cleanThemeColor(input.avatarColor, 'cyan'));
+  db.prepare('INSERT INTO players (id, name, avatarIcon, avatarColor, themeColor, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?)')
+    .run(playerId, cleanName, input.avatarIcon || '🚀', input.avatarColor || 'cyan', themeColor, createdAt, createdAt);
   ensureSkillRows(playerId);
   return getPlayer(playerId)!;
 }
 
-export function updatePlayer(playerId: string, input: Partial<{ name: string; avatarIcon: string; avatarColor: AvatarColor; soundEnabled: boolean; musicEnabled: boolean }>) {
+export function updatePlayer(playerId: string, input: Partial<{ name: string; avatarIcon: string; avatarColor: AvatarColor; themeColor: ThemeColor; soundEnabled: boolean; musicEnabled: boolean }>) {
   const existing = getPlayer(playerId);
   if (!existing) throw new Error('Player not found.');
   const next = {
     name: input.name === undefined ? existing.name : String(input.name).trim().slice(0, 18),
     avatarIcon: input.avatarIcon ?? existing.avatarIcon,
     avatarColor: input.avatarColor ?? existing.avatarColor,
+    themeColor: input.themeColor === undefined ? existing.themeColor : cleanThemeColor(input.themeColor, existing.themeColor),
     soundEnabled: input.soundEnabled === undefined ? existing.soundEnabled : Boolean(input.soundEnabled),
     musicEnabled: input.musicEnabled === undefined ? existing.musicEnabled : Boolean(input.musicEnabled),
     updatedAt: now(),
   };
-  db.prepare('UPDATE players SET name = ?, avatarIcon = ?, avatarColor = ?, soundEnabled = ?, musicEnabled = ?, updatedAt = ? WHERE id = ?')
-    .run(next.name || existing.name, next.avatarIcon, next.avatarColor, next.soundEnabled ? 1 : 0, next.musicEnabled ? 1 : 0, next.updatedAt, playerId);
+  db.prepare('UPDATE players SET name = ?, avatarIcon = ?, avatarColor = ?, themeColor = ?, soundEnabled = ?, musicEnabled = ?, updatedAt = ? WHERE id = ?')
+    .run(next.name || existing.name, next.avatarIcon, next.avatarColor, next.themeColor, next.soundEnabled ? 1 : 0, next.musicEnabled ? 1 : 0, next.updatedAt, playerId);
   return getPlayer(playerId)!;
 }
 
