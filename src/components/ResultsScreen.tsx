@@ -28,15 +28,15 @@ interface ConfettiPiece {
 
 function makeConfetti(): ConfettiPiece[] {
   const width = typeof window !== 'undefined' ? window.innerWidth : 1200;
-  return Array.from({ length: 34 }, (_, index) => ({
+  return Array.from({ length: 86 }, (_, index) => ({
     id: index,
-    tx: (Math.random() - 0.5) * width * 0.86,
-    ty: -60 - Math.random() * 130,
-    rot: (Math.random() - 0.5) * 720,
+    tx: (Math.random() - 0.5) * width * 0.96,
+    ty: -120 - Math.random() * 210,
+    rot: (Math.random() - 0.5) * 1080,
     col: CONFETTI_COLORS[index % CONFETTI_COLORS.length],
-    sz: 5 + Math.random() * 8,
-    dur: 1.4 + Math.random() * 1.0,
-    delay: Math.random() * 0.45,
+    sz: 7 + Math.random() * 12,
+    dur: 2.6 + Math.random() * 1.8,
+    delay: Math.random() * 0.85,
   }));
 }
 
