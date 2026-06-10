@@ -14,9 +14,9 @@ function avgMs(totalTimeMs: number, attempts: number) {
 function PlayerAdminCard({ player, rank, onPlay, onThemeChange }: { player: PlayerData; rank: number; onPlay: (playerId: string) => void; onThemeChange: (playerId: string, themeColor: ThemeColor) => void }) {
   const totalAnswers = player.totalCorrect + player.totalWrong;
   const bestSkill = Object.entries(player.skillStats)
-    .map(([skill, stats]) => ({ skill, attempts: stats.correct + stats.wrong, accuracy: pct(stats.correct, stats.wrong), avg: stats.totalTimeMs }))
+    .map(([skill, stats]) => ({ skill, attempts: stats.correct + stats.wrong, accuracy: pct(stats.correct, stats.wrong), totalTimeMs: stats.totalTimeMs }))
     .filter((item) => item.attempts > 0)
-    .sort((a, b) => b.accuracy - a.accuracy || a.avg - b.avg)[0];
+    .sort((a, b) => b.accuracy - a.accuracy || a.totalTimeMs - b.totalTimeMs)[0];
 
   return <article className="admin-player-card">
     <div className="admin-player-head">
@@ -39,7 +39,7 @@ function PlayerAdminCard({ player, rank, onPlay, onThemeChange }: { player: Play
       <span>XP</span><b>{player.xp}</b>
     </div>
     <div className="admin-player-row">
-      <span>Strongest</span><b>{bestSkill ? `${bestSkill.skill} · ${bestSkill.accuracy}% · ${avgMs(player.skillStats[bestSkill.skill as keyof PlayerData['skillStats']].totalTimeMs, bestSkill.attempts)}` : 'No data yet'}</b>
+      <span>Strongest</span><b>{bestSkill ? `${bestSkill.skill} · ${bestSkill.accuracy}% · ${avgMs(bestSkill.totalTimeMs, bestSkill.attempts)}` : 'No data yet'}</b>
     </div>
 
     <div className="admin-theme-row">
