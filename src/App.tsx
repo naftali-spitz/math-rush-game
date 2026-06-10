@@ -126,7 +126,12 @@ function App() {
     if (!appData) return;
     const existing = appData.players.find((player) => player.id === playerId);
     if (!existing) return;
-    const optimistic = { ...existing, ...updates, updatedAt: new Date().toISOString() };
+    const optimistic: PlayerData = {
+      ...existing,
+      themeColor: updates.themeColor ?? existing.themeColor,
+      styleTheme: updates.styleTheme ?? existing.styleTheme,
+      updatedAt: new Date().toISOString(),
+    };
     setAppData({
       ...appData,
       players: appData.players.map((player) => player.id === playerId ? optimistic : player),
