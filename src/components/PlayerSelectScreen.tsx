@@ -20,7 +20,7 @@ function Leaderboard({ leaderboard }: { leaderboard: LeaderboardEntry[] }) {
   </ol>;
 }
 
-export function PlayerSelectScreen({ players, leaderboard, onSelectPlayer, onAddPlayer }: { players: PlayerData[]; leaderboard: LeaderboardEntry[]; onSelectPlayer: (playerId: string) => void; onAddPlayer: (input: CreatePlayerInput) => Promise<void> }) {
+export function PlayerSelectScreen({ players, leaderboard, onSelectPlayer, onAddPlayer, onOpenAdmin }: { players: PlayerData[]; leaderboard: LeaderboardEntry[]; onSelectPlayer: (playerId: string) => void; onAddPlayer: (input: CreatePlayerInput) => Promise<void>; onOpenAdmin: () => void }) {
   const [name, setName] = useState('');
   const [avatarIcon, setAvatarIcon] = useState(avatarIcons[0]);
   const [avatarColor, setAvatarColor] = useState<AvatarColor>('cyan');
@@ -46,7 +46,7 @@ export function PlayerSelectScreen({ players, leaderboard, onSelectPlayer, onAdd
     if (!cleanName || busy) return;
     setBusy(true);
     try {
-      await onAddPlayer({ name: cleanName, avatarIcon, avatarColor });
+      await onAddPlayer({ name: cleanName, avatarIcon, avatarColor, themeColor: avatarColor });
       setName('');
       setAvatarIcon(avatarIcons[0]);
       setAvatarColor('cyan');
@@ -57,8 +57,13 @@ export function PlayerSelectScreen({ players, leaderboard, onSelectPlayer, onAdd
   };
 
   return <main className="screen center"><section className="hero choose-hero">
-    <p className="eyebrow">Shared Family Server</p>
-    <h1>Math Rush</h1>
+    <div className="choose-topbar">
+      <div>
+        <p className="eyebrow">Shared Family Server</p>
+        <h1>Math Rush</h1>
+      </div>
+      <button className="secondary" onClick={onOpenAdmin}>Management Hub</button>
+    </div>
     <p className="copy">Choose your player each time you open the game. Scores, XP, history, and leaderboard are shared across the home network.</p>
 
     <div className="choose-layout single-create-action">
@@ -101,7 +106,7 @@ export function PlayerSelectScreen({ players, leaderboard, onSelectPlayer, onAdd
             </div>
           </div>
           <div>
-            <span className="micro-label">Color</span>
+            <span className="micro-label">Color + Theme</span>
             <div className="color-picker">
               {avatarColors.map((color) => <button key={color} type="button" className={avatarColor === color ? `color-choice ${color} selected` : `color-choice ${color}`} aria-label={color} onClick={() => setAvatarColor(color)} />)}
             </div>
