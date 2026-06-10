@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { getLevel } from '../engine/levels';
 import { levelProgress } from '../engine/progressionEngine';
 import type { AppSettings, LeaderboardEntry, PlayerData, RoundSeconds, RushHistoryRecord } from '../types/game';
@@ -34,22 +35,62 @@ function History({ history }: { history: RushHistoryRecord[] }) {
   </div>;
 }
 
+function ProfileModal({ player, settings, onChange, onClose }: { player: PlayerData; settings: AppSettings; onChange: (settings: AppSettings) => void; onClose: () => void }) {
+  const totalAnswers = player.totalCorrect + player.totalWrong;
+  const playerAccuracy = totalAnswers ? Math.round((player.totalCorrect / totalAnswers) * 100) : 0;
+
+  return <div className="modal-backdrop profile-backdrop" role="presentation" onMouseDown={onClose}>
+    <section className="modal-card profile-modal" role="dialog" aria-modal="true" aria-labelledby="profile-title" onMouseDown={(event) => event.stopPropagation()}>
+      <button className="modal-close" aria-label="Close profile" onClick={onClose}>×</button>
+      <div className="profile-modal-head">
+        <Avatar player={player} />
+        <div>
+          <p className="eyebrow">Player Profile</p>
+          <h2 id="profile-title">{player.name}</h2>
+          <small>Level {player.level} · {player.xp} XP · Best {player.bestScore}</small>
+        </div>
+      </div>
+
+      <div className="profile-stat-strip">
+        <div><span>Games</span><b>{player.gamesPlayed}</b></div>
+        <div><span>Accuracy</span><b>{playerAccuracy}%</b></div>
+        <div><span>Answers</span><b>{totalAnswers}</b></div>
+      </div>
+
+      <SettingsPanel settings={settings} onChange={onChange} />
+    </section>
+  </div>;
+}
+
 export function StartScreen({ player, leaderboard, history, roundSeconds, onRoundSecondsChange, onStart, onSettingsChange, onBackToPlayers, onOpenAdmin }: { player: PlayerData; leaderboard: LeaderboardEntry[]; history: RushHistoryRecord[]; roundSeconds: RoundSeconds; onRoundSecondsChange: (roundSeconds: RoundSeconds) => void; onStart: () => void; onSettingsChange: (settings: AppSettings) => void; onBackToPlayers: () => void; onOpenAdmin: () => void }) {
+  const [profileOpen, setProfileOpen] = useState(false);
   const level = getLevel(player.level);
   const progress = levelProgress(player.level, player.xp);
-  const settings = { soundEnabled: player.soundEnabled, musicEnabled: player.musicEnabled, themeColor: player.themeColor };
+  const settings: AppSettings = { soundEnabled: player.soundEnabled, musicEnabled: player.musicEnabled, themeColor: player.themeColor, styleTheme: player.styleTheme };
+
+  useEffect(() => {
+    if (!profileOpen) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setProfileOpen(false);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [profileOpen]);
 
   return <main className="screen center"><section className="hero player-home">
     <div className="player-home-top">
       <div className="player-title">
-        <Avatar player={player} />
+        <button className="avatar-profile-trigger" onClick={() => setProfileOpen(true)} aria-label={`Open ${player.name} profile`}>
+          <Avatar player={player} />
+        </button>
         <div>
           <p className="eyebrow">Player Ready</p>
           <h1>{player.name}</h1>
         </div>
       </div>
       <div className="home-actions">
-        <button className="secondary" onClick={onOpenAdmin}>Management Hub</button>
+        <button className="secondary" onClick={() => setProfileOpen(true)}>Profile</button>
+        <button className="secondary" onClick={onOpenAdmin}>Admin Hub</button>
         <button className="secondary" onClick={onBackToPlayers}>Switch Player</button>
       </div>
     </div>
@@ -67,11 +108,12 @@ export function StartScreen({ player, leaderboard, history, roundSeconds, onRoun
     </div>
 
     <button className="primary" onClick={onStart}>Start {roundSeconds}s Rush</button>
-    <SettingsPanel settings={settings} onChange={onSettingsChange} />
 
     <div className="dashboard-grid">
       <section className="dashboard-card"><div className="section-title"><span>Family Leaderboard</span></div><Leaderboard leaderboard={leaderboard} /></section>
       <section className="dashboard-card"><div className="section-title"><span>Recent Rushes</span></div><History history={history} /></section>
     </div>
+
+    {profileOpen && <ProfileModal player={player} settings={settings} onChange={onSettingsChange} onClose={() => setProfileOpen(false)} />}
   </section></main>;
 }
