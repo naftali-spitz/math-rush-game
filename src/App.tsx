@@ -3,12 +3,13 @@ import { updateHiddenDifficultyAdjustment } from './engine/adaptiveEngine';
 import { applyLevelProgression } from './engine/progressionEngine';
 import { accuracy, rushXp } from './engine/scoringEngine';
 import { playSound, setMusicEnabled } from './engine/soundEngine';
+import { AdminHubScreen } from './components/AdminHubScreen';
 import { GameScreen, rankSkills, type RushSummary } from './components/GameScreen';
 import { PlayerSelectScreen } from './components/PlayerSelectScreen';
 import { ResultsScreen, type RushResult } from './components/ResultsScreen';
 import { StartScreen } from './components/StartScreen';
-import { createPlayer, getAppData, getPlayerHistory, saveRushResult, updatePlayerSettings } from './storage/api';
-import type { AppData, AppSettings, CreatePlayerInput, PlayerData, RoundSeconds, RushHistoryRecord, Screen, Skill } from './types/game';
+import { createPlayer, getAppData, getPlayerHistory, saveRushResult, updatePlayer, updatePlayerSettings } from './storage/api';
+import type { AppData, AppSettings, CreatePlayerInput, PlayerData, RoundSeconds, RushHistoryRecord, Screen, Skill, ThemeColor } from './types/game';
 
 const DEFAULT_ROUND_SECONDS: RoundSeconds = 60;
 
@@ -23,7 +24,7 @@ function cloneSkillStats(stats: PlayerData['skillStats']) {
 }
 
 function settingsFromPlayer(player: PlayerData): AppSettings {
-  return { soundEnabled: player.soundEnabled, musicEnabled: player.musicEnabled };
+  return { soundEnabled: player.soundEnabled, musicEnabled: player.musicEnabled, themeColor: player.themeColor };
 }
 
 function App() {
@@ -96,6 +97,11 @@ function App() {
     setScreen('choose');
   };
 
+  const handleOpenAdmin = () => {
+    setLastResult(null);
+    setScreen('admin');
+  };
+
   const updateSettings = async (settings: AppSettings) => {
     if (!appData || !selectedPlayer) return;
     const optimisticPlayer = { ...selectedPlayer, ...settings, updatedAt: new Date().toISOString() };
@@ -107,6 +113,21 @@ function App() {
     const response = await updatePlayerSettings(selectedPlayer.id, settings);
     setSelectedPlayer(response.player);
     setAppData({ players: response.players, leaderboard: response.leaderboard });
+  };
+
+  const updatePlayerTheme = async (playerId: string, themeColor: ThemeColor) => {
+    if (!appData) return;
+    const existing = appData.players.find((player) => player.id === playerId);
+    if (!existing) return;
+    const optimistic = { ...existing, themeColor, updatedAt: new Date().toISOString() };
+    setAppData({
+      ...appData,
+      players: appData.players.map((player) => player.id === playerId ? optimistic : player),
+    });
+    if (selectedPlayer?.id === playerId) setSelectedPlayer(optimistic);
+    const response = await updatePlayer(playerId, { themeColor });
+    setAppData({ players: response.players, leaderboard: response.leaderboard });
+    if (selectedPlayer?.id === playerId) setSelectedPlayer(response.player);
   };
 
   const start = () => {
@@ -197,18 +218,21 @@ function App() {
     if (newBest) window.setTimeout(() => playSound('newBest', response.player.soundEnabled), 250);
   };
 
+  const themeColor = selectedPlayer?.themeColor ?? 'cyan';
+
   if (loadError) {
-    return <div className="app-shell"><div className="orb one" /><div className="orb two" /><div className="scanlines" /><main className="screen center"><section className="hero"><p className="eyebrow">Server Error</p><h1>Math Rush</h1><p className="copy">{loadError}</p><p className="copy">Make sure the Math Rush API is running on the home server.</p></section></main></div>;
+    return <div className={`app-shell theme-${themeColor}`}><div className="orb one" /><div className="orb two" /><div className="scanlines" /><main className="screen center"><section className="hero"><p className="eyebrow">Server Error</p><h1>Math Rush</h1><p className="copy">{loadError}</p><p className="copy">Make sure the Math Rush API is running on the home server.</p></section></main></div>;
   }
 
   if (!appData) {
-    return <div className="app-shell"><div className="orb one" /><div className="orb two" /><div className="scanlines" /><main className="screen center"><section className="hero"><p className="eyebrow">Loading</p><h1>Math Rush</h1><p className="copy">Connecting to shared family server...</p></section></main></div>;
+    return <div className={`app-shell theme-${themeColor}`}><div className="orb one" /><div className="orb two" /><div className="scanlines" /><main className="screen center"><section className="hero"><p className="eyebrow">Loading</p><h1>Math Rush</h1><p className="copy">Connecting to shared family server...</p></section></main></div>;
   }
 
-  return <div className="app-shell">
+  return <div className={`app-shell theme-${themeColor}`}>
     <div className="orb one" /><div className="orb two" /><div className="scanlines" />
-    {screen === 'choose' && <PlayerSelectScreen players={appData.players} leaderboard={appData.leaderboard} onSelectPlayer={handleSelectPlayer} onAddPlayer={handleAddPlayer} />}
-    {screen === 'start' && selectedPlayer && <StartScreen player={selectedPlayer} leaderboard={appData.leaderboard} history={history} roundSeconds={roundSeconds} onRoundSecondsChange={setRoundSeconds} onStart={start} onSettingsChange={updateSettings} onBackToPlayers={handleBackToPlayers} />}
+    {screen === 'choose' && <PlayerSelectScreen players={appData.players} leaderboard={appData.leaderboard} onSelectPlayer={handleSelectPlayer} onAddPlayer={handleAddPlayer} onOpenAdmin={handleOpenAdmin} />}
+    {screen === 'admin' && <AdminHubScreen players={appData.players} leaderboard={appData.leaderboard} onBack={() => setScreen(selectedPlayer ? 'start' : 'choose')} onPlayPlayer={handleSelectPlayer} onThemeChange={updatePlayerTheme} />}
+    {screen === 'start' && selectedPlayer && <StartScreen player={selectedPlayer} leaderboard={appData.leaderboard} history={history} roundSeconds={roundSeconds} onRoundSecondsChange={setRoundSeconds} onStart={start} onSettingsChange={updateSettings} onBackToPlayers={handleBackToPlayers} onOpenAdmin={handleOpenAdmin} />}
     {screen === 'countdown' && <main className="screen center"><div className="countdown"><span className={countdown === 'GO' ? 'go' : undefined}>{countdown}</span></div></main>}
     {screen === 'game' && selectedPlayer && <GameScreen key={gameKey} level={selectedPlayer.level} hiddenDifficultyAdjustment={selectedPlayer.hiddenDifficultyAdjustment} settings={settingsFromPlayer(selectedPlayer)} roundSeconds={roundSeconds} onFinished={finish} />}
     {screen === 'results' && selectedPlayer && lastResult && <ResultsScreen result={lastResult} bestScore={selectedPlayer.bestScore} onPlayAgain={start} onBack={() => setScreen('start')} />}
