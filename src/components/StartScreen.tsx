@@ -34,10 +34,10 @@ function History({ history }: { history: RushHistoryRecord[] }) {
   </div>;
 }
 
-export function StartScreen({ player, leaderboard, history, roundSeconds, onRoundSecondsChange, onStart, onSettingsChange, onBackToPlayers }: { player: PlayerData; leaderboard: LeaderboardEntry[]; history: RushHistoryRecord[]; roundSeconds: RoundSeconds; onRoundSecondsChange: (roundSeconds: RoundSeconds) => void; onStart: () => void; onSettingsChange: (settings: AppSettings) => void; onBackToPlayers: () => void }) {
+export function StartScreen({ player, leaderboard, history, roundSeconds, onRoundSecondsChange, onStart, onSettingsChange, onBackToPlayers, onOpenAdmin }: { player: PlayerData; leaderboard: LeaderboardEntry[]; history: RushHistoryRecord[]; roundSeconds: RoundSeconds; onRoundSecondsChange: (roundSeconds: RoundSeconds) => void; onStart: () => void; onSettingsChange: (settings: AppSettings) => void; onBackToPlayers: () => void; onOpenAdmin: () => void }) {
   const level = getLevel(player.level);
   const progress = levelProgress(player.level, player.xp);
-  const settings = { soundEnabled: player.soundEnabled, musicEnabled: player.musicEnabled };
+  const settings = { soundEnabled: player.soundEnabled, musicEnabled: player.musicEnabled, themeColor: player.themeColor };
 
   return <main className="screen center"><section className="hero player-home">
     <div className="player-home-top">
@@ -48,7 +48,10 @@ export function StartScreen({ player, leaderboard, history, roundSeconds, onRoun
           <h1>{player.name}</h1>
         </div>
       </div>
-      <button className="secondary" onClick={onBackToPlayers}>Switch Player</button>
+      <div className="home-actions">
+        <button className="secondary" onClick={onOpenAdmin}>Management Hub</button>
+        <button className="secondary" onClick={onBackToPlayers}>Switch Player</button>
+      </div>
     </div>
 
     <p className="copy">Answer fast. Build streaks. Level up. Keep your rhythm clean and your family score climbing.</p>
