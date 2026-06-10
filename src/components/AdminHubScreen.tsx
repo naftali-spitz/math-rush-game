@@ -1,6 +1,13 @@
-import type { LeaderboardEntry, PlayerData, ThemeColor } from '../types/game';
+import type { LeaderboardEntry, PlayerData, StyleTheme, ThemeColor } from '../types/game';
 
 const themeColors: ThemeColor[] = ['cyan', 'purple', 'yellow', 'pink', 'green', 'orange', 'blue'];
+const styleThemes: Array<{ id: StyleTheme; label: string }> = [
+  { id: 'futuristic', label: 'Futuristic' },
+  { id: 'modern', label: 'Modern' },
+  { id: 'kids', label: 'Kids' },
+];
+
+type AppearanceUpdate = Partial<Pick<PlayerData, 'themeColor' | 'styleTheme'>>;
 
 function pct(correct: number, wrong: number) {
   const total = correct + wrong;
@@ -11,7 +18,7 @@ function avgMs(totalTimeMs: number, attempts: number) {
   return attempts ? `${(totalTimeMs / attempts / 1000).toFixed(1)}s` : '—';
 }
 
-function PlayerAdminCard({ player, rank, onPlay, onThemeChange }: { player: PlayerData; rank: number; onPlay: (playerId: string) => void; onThemeChange: (playerId: string, themeColor: ThemeColor) => void }) {
+function PlayerAdminCard({ player, rank, onPlay, onAppearanceChange }: { player: PlayerData; rank: number; onPlay: (playerId: string) => void; onAppearanceChange: (playerId: string, updates: AppearanceUpdate) => void }) {
   const totalAnswers = player.totalCorrect + player.totalWrong;
   const bestSkill = Object.entries(player.skillStats)
     .map(([skill, stats]) => ({ skill, attempts: stats.correct + stats.wrong, accuracy: pct(stats.correct, stats.wrong), totalTimeMs: stats.totalTimeMs }))
@@ -43,20 +50,33 @@ function PlayerAdminCard({ player, rank, onPlay, onThemeChange }: { player: Play
     </div>
 
     <div className="admin-theme-row">
-      <span>Theme</span>
+      <span>Style</span>
+      <div className="admin-style-buttons">
+        {styleThemes.map((theme) => <button
+          key={theme.id}
+          type="button"
+          className={player.styleTheme === theme.id ? 'style-pill selected' : 'style-pill'}
+          onClick={() => onAppearanceChange(player.id, { styleTheme: theme.id })}
+        >{theme.label}</button>)}
+      </div>
+    </div>
+
+    <div className="admin-theme-row">
+      <span>Accent</span>
       <div className="admin-theme-dots">
         {themeColors.map((color) => <button
           key={color}
+          type="button"
           className={player.themeColor === color ? `theme-dot ${color} selected` : `theme-dot ${color}`}
-          aria-label={`Use ${color} theme for ${player.name}`}
-          onClick={() => onThemeChange(player.id, color)}
+          aria-label={`Use ${color} accent for ${player.name}`}
+          onClick={() => onAppearanceChange(player.id, { themeColor: color })}
         />)}
       </div>
     </div>
   </article>;
 }
 
-export function AdminHubScreen({ players, leaderboard, onBack, onPlayPlayer, onThemeChange }: { players: PlayerData[]; leaderboard: LeaderboardEntry[]; onBack: () => void; onPlayPlayer: (playerId: string) => void; onThemeChange: (playerId: string, themeColor: ThemeColor) => void }) {
+export function AdminHubScreen({ players, leaderboard, onBack, onPlayPlayer, onAppearanceChange }: { players: PlayerData[]; leaderboard: LeaderboardEntry[]; onBack: () => void; onPlayPlayer: (playerId: string) => void; onAppearanceChange: (playerId: string, updates: AppearanceUpdate) => void }) {
   const totalGames = players.reduce((sum, player) => sum + player.gamesPlayed, 0);
   const totalCorrect = players.reduce((sum, player) => sum + player.totalCorrect, 0);
   const totalWrong = players.reduce((sum, player) => sum + player.totalWrong, 0);
@@ -67,13 +87,13 @@ export function AdminHubScreen({ players, leaderboard, onBack, onPlayPlayer, onT
   return <main className="screen center"><section className="hero admin-hub">
     <div className="admin-topbar">
       <div>
-        <p className="eyebrow">Management Hub</p>
+        <p className="eyebrow">Admin Hub</p>
         <h1>Admin</h1>
       </div>
       <button className="secondary" onClick={onBack}>Back</button>
     </div>
 
-    <p className="copy">Track family progress, compare players, and tune each player’s game theme from one place.</p>
+    <p className="copy">Family-level management lives here. Player-only preferences are available from each player’s profile popup.</p>
 
     <div className="admin-summary-grid">
       <div className="stat"><span>Players</span><b>{players.length}</b></div>
@@ -83,7 +103,7 @@ export function AdminHubScreen({ players, leaderboard, onBack, onPlayPlayer, onT
     </div>
 
     <div className="admin-list">
-      {sorted.map((player, index) => <PlayerAdminCard key={player.id} player={player} rank={index + 1} onPlay={onPlayPlayer} onThemeChange={onThemeChange} />)}
+      {sorted.map((player, index) => <PlayerAdminCard key={player.id} player={player} rank={index + 1} onPlay={onPlayPlayer} onAppearanceChange={onAppearanceChange} />)}
       {!sorted.length && <p className="empty-state">No players yet. Go back and create the first profile.</p>}
     </div>
   </section></main>;
