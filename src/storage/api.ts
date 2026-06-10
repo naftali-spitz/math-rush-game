@@ -32,7 +32,7 @@ export function createPlayer(input: CreatePlayerInput) {
   });
 }
 
-export function updatePlayer(playerId: string, input: Partial<Pick<PlayerData, 'name' | 'avatarIcon' | 'avatarColor' | 'soundEnabled' | 'musicEnabled'>>) {
+export function updatePlayer(playerId: string, input: Partial<Pick<PlayerData, 'name' | 'avatarIcon' | 'avatarColor' | 'themeColor' | 'soundEnabled' | 'musicEnabled'>>) {
   return request<PlayerResponse>(`/players/${playerId}`, {
     method: 'PATCH',
     body: JSON.stringify(input),
