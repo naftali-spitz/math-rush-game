@@ -1,8 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
-import type { AvatarColor, CreatePlayerInput, LeaderboardEntry, PlayerData } from '../types/game';
+import type { AvatarColor, CreatePlayerInput, LeaderboardEntry, PlayerData, StyleTheme } from '../types/game';
 
 const avatarIcons = ['🚀', '⚡', '🧠', '🔥', '⭐', '🐺', '🦊', '🐼', '🦁', '🐯'];
 const avatarColors: AvatarColor[] = ['cyan', 'purple', 'yellow', 'pink', 'green', 'orange', 'blue'];
+const styleThemes: Array<{ id: StyleTheme; label: string }> = [
+  { id: 'futuristic', label: 'Futuristic' },
+  { id: 'modern', label: 'Modern' },
+  { id: 'kids', label: 'Kids' },
+];
 
 function Avatar({ icon, color }: { icon: string; color: AvatarColor }) {
   return <span className={`avatar ${color}`}>{icon}</span>;
@@ -24,6 +29,7 @@ export function PlayerSelectScreen({ players, leaderboard, onSelectPlayer, onAdd
   const [name, setName] = useState('');
   const [avatarIcon, setAvatarIcon] = useState(avatarIcons[0]);
   const [avatarColor, setAvatarColor] = useState<AvatarColor>('cyan');
+  const [styleTheme, setStyleTheme] = useState<StyleTheme>('futuristic');
   const [busy, setBusy] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
   const nameRef = useRef<HTMLInputElement | null>(null);
@@ -46,10 +52,11 @@ export function PlayerSelectScreen({ players, leaderboard, onSelectPlayer, onAdd
     if (!cleanName || busy) return;
     setBusy(true);
     try {
-      await onAddPlayer({ name: cleanName, avatarIcon, avatarColor, themeColor: avatarColor });
+      await onAddPlayer({ name: cleanName, avatarIcon, avatarColor, themeColor: avatarColor, styleTheme });
       setName('');
       setAvatarIcon(avatarIcons[0]);
       setAvatarColor('cyan');
+      setStyleTheme('futuristic');
       setCreateOpen(false);
     } finally {
       setBusy(false);
@@ -62,7 +69,7 @@ export function PlayerSelectScreen({ players, leaderboard, onSelectPlayer, onAdd
         <p className="eyebrow">Shared Family Server</p>
         <h1>Math Rush</h1>
       </div>
-      <button className="secondary" onClick={onOpenAdmin}>Management Hub</button>
+      <button className="secondary" onClick={onOpenAdmin}>Admin Hub</button>
     </div>
     <p className="copy">Choose your player each time you open the game. Scores, XP, history, and leaderboard are shared across the home network.</p>
 
@@ -106,9 +113,15 @@ export function PlayerSelectScreen({ players, leaderboard, onSelectPlayer, onAdd
             </div>
           </div>
           <div>
-            <span className="micro-label">Color + Theme</span>
+            <span className="micro-label">Accent Color</span>
             <div className="color-picker">
               {avatarColors.map((color) => <button key={color} type="button" className={avatarColor === color ? `color-choice ${color} selected` : `color-choice ${color}`} aria-label={color} onClick={() => setAvatarColor(color)} />)}
+            </div>
+          </div>
+          <div>
+            <span className="micro-label">Style Theme</span>
+            <div className="create-style-buttons">
+              {styleThemes.map((theme) => <button key={theme.id} type="button" className={styleTheme === theme.id ? 'style-pill selected' : 'style-pill'} onClick={() => setStyleTheme(theme.id)}>{theme.label}</button>)}
             </div>
           </div>
           <button className="primary create-button" disabled={busy || !name.trim()}>{busy ? 'Creating...' : 'Create Player'}</button>
